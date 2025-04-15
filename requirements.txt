@@ -1,7 +1,16 @@
+# Load the required core packages
 streamlit
 langchain
-unstructured
-pypdf
 openai
-tiktoken
 python-dotenv
+tiktoken
+
+# Required for PDF loading
+pypdf
+
+# Required for UnstructuredFileLoader
+unstructured
+beautifulsoup4
+lxml
+pandas
+python-magic-bin==0.4.14  # works better with Streamlit Cloud than python-magic
