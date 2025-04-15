@@ -1,3 +1,5 @@
+openai_api_key = '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'
+
 from langchain.document_loaders import PyPDFLoader, UnstructuredFileLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains.summarize import load_summarize_chain
@@ -7,82 +9,62 @@ from langchain.embeddings import OpenAIEmbeddings
 from langchain.chains import RetrievalQA
 
 
-class DocumentProcessor:
-    def __init__(self, openai_api_key, model_name="gpt-3.5-turbo", temperature=0):
-        self.openai_api_key = openai_api_key
-        self.llm = ChatOpenAI(temperature=temperature, model_name=model_name, openai_api_key=openai_api_key)
+def load_documents(file_path):
+    if file_path.endswith('.pdf'): # Check and load the file if in pdf formate
+        loader = PyPDFLoader(file_path)
+    else: # Check and load the file if in other formats like docx or txt
+        loader = UnstructuredFileLoader(file_path)
+    return loader.load()
 
-    def load_documents(self, file_path):
-        """
-        Load documents from a file.
-
-        Args:
-            file_path (str): Path to the document file.
-
-        Returns:    
-            list: List of loaded documents.
-
-        """
-        if file_path.endswith('.pdf'):
-            loader = PyPDFLoader(file_path)
-        else:
-            loader = UnstructuredFileLoader(file_path)
-        return loader.load()
-
-    def split_docs(self, docs, chunk_size=1000, chunk_overlap=100):
-        """Split documents into smaller chunks."""
-        splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-        return splitter.split_documents(docs)
-
-    def get_summary_chain(self, strategy="map_reduce"):
-        """Get a summarization chain."""
-        return load_summarize_chain(self.llm, chain_type=strategy)
-
-    def summarize_docs(self, splits, strategy="map_reduce"):
-        """Summarize document splits."""
-        chain = self.get_summary_chain(strategy)
-        return chain.run(splits)
-
-    def create_vectorstore(self, docs):
-        """Create a vectorstore for semantic search."""
-        embeddings = OpenAIEmbeddings(openai_api_key=self.openai_api_key)
-        vectorstore = FAISS.from_documents(docs, embeddings)
-        return vectorstore
-
-    def create_qa_chain(self, vectorstore):
-        """Create a QA chain using the vectorstore."""
-        retriever = vectorstore.as_retriever()
-        qa_chain = RetrievalQA.from_chain_type(llm=self.llm, retriever=retriever)
-        return qa_chain
+# Split the documents into smaller chunks for analysis
+def split_docs(docs):
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=100
+    )
+    return splitter.split_documents(docs)
 
 
-def main(file_path, openai_api_key):
-    processor = DocumentProcessor(openai_api_key=openai_api_key)
+# Use OpenAI API key to summarize the documents
+llm = ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo", \
+                 openai_api_key = openai_api_key)
 
-    # Load and process the document
-    docs = processor.load_documents(file_path)
-    splits = processor.split_docs(docs)
+def get_summary_chain(strategy="map_reduce"):
+    return load_summarize_chain(llm, chain_type=strategy)
 
-    # Summarize the document
-    summary = processor.summarize_docs(splits)
-    print("Summary of the document:")
-    print(summary)
-
-    # Create a QA chain and answer questions
-    vectorstore = processor.create_vectorstore(splits)
-    qa = processor.create_qa_chain(vectorstore)
-
-    risks_answer = qa.run("What are the key risks mentioned in this document?")
-    print("Answer about risks:")
-    print(risks_answer)
-
-    goals_answer = qa.run("What are the main goals of the project?")
-    print("Goals of the project:")
-    print(goals_answer)
+def summarize_docs(splits):
+    chain = get_summary_chain("map_reduce")
+    return chain.run(splits)
 
 
-if __name__ == "__main__":
-    # Example usage
-    file_path = "Project 2 Plan.pdf"  
-    openai_api_key = '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'
-    main(file_path, openai_api_key)
+# Transform text documents into numerical vectors that capture their semantic meaning
+# Enable semantic search to find documents based on meaning instead of keyword matching
+def create_vectorstore(docs):
+    embeddings = OpenAIEmbeddings(openai_api_key = openai_api_key)
+    vectorstore = FAISS.from_documents(docs, embeddings)
+    return vectorstore
+
+
+# Create a chain that can answer questions based on the vectorstore
+def create_qa_chain(vectorstore):
+    retriever = vectorstore.as_retriever()
+    qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
+    return qa_chain
+
+# Load and summarizes the document
+docs = load_documents("ParentData_CoverLetter.docx")
+splits = split_docs(docs)
+summary = summarize_docs(splits)
+print("Summary of the document:")
+print(summary)
+
+# Highlight the risks associated with the project if applicable to the document
+qa = create_qa_chain(create_vectorstore(splits))
+answer = qa.run("What are the key risks mentioned in this document?")
+print("Answer about risks:")
+print(answer)
+
+# Summarize the goal of the project if applicable to the document
+qa.run("What are the main goal of the project?")
+print("Goals of the project:")
+print(answer)
