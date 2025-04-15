@@ -1,22 +1,13 @@
-# Core app dependencies
 streamlit
 langchain==0.1.14
 openai
 python-dotenv
 tiktoken
 
-# For document loading
 pypdf
 unstructured[all-docs]==0.11.2
-
-# Safer HTML/XML parsing
 beautifulsoup4
 lxml
 pandas
-
-# Safer magic detection (compatible with Streamlit Cloud)
 python-magic-bin==0.4.14
-
-# Required for FAISS vectorstore
 faiss-cpu
-
